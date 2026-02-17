@@ -23,5 +23,5 @@
 ### 1. Клонирование репозитория
 
 ```bash
-git clone <url_репозитория>
-cd <папка_проекта>
+git clone <https://github.com/VladimirBott/Telegram_PlansBot.git>
+cd <Telegram-bot>
