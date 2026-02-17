@@ -16,12 +16,12 @@
 - Python 3.10+
 - `python-telegram-bot` (асинхронная версия)
 - `asyncpg` (работа с PostgreSQL)
-- `PostgreSQL` (база данных)
+- PostgreSQL (база данных)
 
 ## Установка и запуск
 
 ### 1. Клонирование репозитория
 
 ```bash
-git clone <https://github.com/VladimirBott/Telegram_PlansBot.git>
-cd <Telegram-bot>
+git clone <url_репозитория>
+cd <папка_проекта>
