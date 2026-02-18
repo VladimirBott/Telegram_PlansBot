@@ -1,27 +1,20 @@
 import asyncio
 import asyncpg
-import logging
 from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from src.config import DATABASE_URL, TOKEN
+from logger import setup_logger
 
-# ---------- Настройка логирования ----------
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO,
-    handlers=[
-        logging.FileHandler("bot.log"),      # запись в файл
-        logging.StreamHandler()              # вывод в консоль
-    ]
-)
-logger = logging.getLogger(__name__)
-# -------------------------------------------
+# Настраиваем логгер для этого модуля
+logger = setup_logger(__name__)
+
 
 async def init_db_pool():
     """Создание пула соединений с БД."""
     logger.info("Инициализация пула соединений с PostgreSQL...")
     return await asyncpg.create_pool(DATABASE_URL, min_size=1, max_size=10)
+
 
 # Работа с напоминаниями
 async def add_reminder(pool, user_id, chat_id, text, remind_time):
@@ -32,6 +25,7 @@ async def add_reminder(pool, user_id, chat_id, text, remind_time):
         )
     logger.info(f"Добавлено напоминание для user {user_id}: {text} на {remind_time}")
 
+
 async def get_due_reminders(pool):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
@@ -39,10 +33,12 @@ async def get_due_reminders(pool):
         )
         return [(r['id'], r['chat_id'], r['text']) for r in rows]
 
+
 async def mark_done(pool, reminder_id):
     async with pool.acquire() as conn:
         await conn.execute("UPDATE reminders SET is_done = TRUE WHERE id = $1", reminder_id)
     logger.info(f"Напоминание {reminder_id} отмечено выполненным")
+
 
 async def get_user_reminders(pool, user_id):
     async with pool.acquire() as conn:
@@ -51,6 +47,7 @@ async def get_user_reminders(pool, user_id):
             user_id
         )
         return rows
+
 
 # Обработчики команд
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -65,6 +62,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/done <номер> — отметить задачу выполненной"
     )
     logger.info(f"Пользователь {update.effective_user.id} запустил бота")
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -97,6 +95,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await add_reminder(pool, user_id, chat_id, reminder_text, dt)
     await update.message.reply_text(f"✅ Напомню: {reminder_text}\n⏰ {dt.strftime('%d.%m.%Y %H:%M')}")
 
+
 async def tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     pool = context.bot_data['db_pool']
@@ -113,6 +112,7 @@ async def tasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += f"{i}. {r['text']} — {dt.strftime('%d.%m.%Y %H:%M')}\n"
     await update.message.reply_text(msg)
     logger.info(f"Пользователь {user_id} запросил задачи, отправлено {len(reminders)} напоминаний")
+
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -136,6 +136,7 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Задача {num} отмечена выполненной.")
     logger.info(f"Пользователь {user_id} отметил задачу {rid} как выполненную")
 
+
 # Фоновая задача для проверки напоминаний
 async def reminder_loop(app: Application):
     logger.info("Цикл проверки напоминаний запущен")
@@ -153,6 +154,7 @@ async def reminder_loop(app: Application):
         except Exception as e:
             logger.error(f"Ошибка в цикле напоминаний: {e}", exc_info=True)
         await asyncio.sleep(30)
+
 
 async def main():
     logger.info("Запуск бота...")
@@ -185,6 +187,7 @@ async def main():
         await app.shutdown()
         await pool.close()
         logger.info("Бот остановлен.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
