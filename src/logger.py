@@ -1,29 +1,34 @@
 import logging
+import os
+from pathlib import Path
 
-def setup_logger(name=__name__, log_file='bot.log', level=logging.INFO):
+def setup_logger(name=None, log_file='bot.log', level=logging.INFO):
     """
-    Настраивает и возвращает логгер с заданным именем.
-    Логи выводятся в консоль и в файл.
+    Настраивает корневой логгер (один раз) и возвращает логгер с указанным именем.
+    Логи пишутся в папку data в корне проекта (создаётся автоматически).
     """
-    # Создаём форматтер
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # Определяем корень проекта (на один уровень выше, чем src)
+    # Предполагаем, что этот файл лежит в src/logger.py
+    current_dir = Path(__file__).parent          # папка src
+    project_root = current_dir.parent            # корень проекта
+    log_dir = project_root / 'data'               # полный путь к папке data
+    log_file_path = log_dir / log_file            # полный путь к файлу лога
 
-    # Обработчик для файла
-    file_handler = logging.FileHandler(log_file, encoding='utf-8')
-    file_handler.setFormatter(formatter)
+    # Создаём папку data, если её нет
+    log_dir.mkdir(exist_ok=True)
 
-    # Обработчик для консоли
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-
-    # Настраиваем корневой логгер (чтобы все логи попадали в оба обработчика)
     root_logger = logging.getLogger()
-    root_logger.setLevel(level)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(stream_handler)
+    if not root_logger.handlers:
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+        file_handler.setFormatter(formatter)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        root_logger.setLevel(level)
+        root_logger.addHandler(file_handler)
+        root_logger.addHandler(stream_handler)
 
-    # Возвращаем логгер с именем модуля
-    return logging.getLogger(name)
+    return logging.getLogger(name) if name else root_logger
 
-# Сразу создаём и настраиваем логгер для использования в других модулях
-logger = setup_logger(__name__)
+# Первичная настройка корневого логгера
+setup_logger()
